@@ -20,8 +20,7 @@ class Training:
     def train_valid_generator(self):
 
         datagenerator_kwargs = dict(
-            rescale = 1./255,
-            validation_split=0.20
+            rescale = 1./255
         )
 
         dataflow_kwargs = dict(
@@ -35,8 +34,7 @@ class Training:
         )
 
         self.valid_generator = valid_datagenerator.flow_from_directory(
-            directory=self.config.training_data,
-            subset="validation",
+            directory=self.config.training_data / "valid",
             shuffle=False,
             **dataflow_kwargs
         )
@@ -55,8 +53,7 @@ class Training:
             train_datagenerator = valid_datagenerator
 
         self.train_generator = train_datagenerator.flow_from_directory(
-            directory=self.config.training_data,
-            subset="training",
+            directory=self.config.training_data / "train",
             shuffle=True,
             **dataflow_kwargs
         )
