@@ -5,7 +5,7 @@ data_ingestion:
   root_dir: artifacts/data_ingestion
   source_URL: https://drive.google.com/file/d/1-ALOe5trwgFDiwaIp3VxwvWg2Cc4KxuL/view?usp=drive_link
   local_data_file: artifacts/data_ingestion/data.zip
-  unzip_dir: artifacts/data_ingestion
+  unzip_dir: artifacts/data_ingestion/Banana
 
 
 prepare_base_model:
