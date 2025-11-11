@@ -5,6 +5,7 @@ import tensorflow as tf
 import time
 from pathlib import Path
 from cnnClassifier.entity.config_entity import TrainingConfig
+from cnnClassifier.utils.common import save_json
 
 
 class Training:
@@ -65,6 +66,13 @@ class Training:
 
 
 
+    def save_class_indices(self):
+        """Save class indices mapping for later use in prediction"""
+        class_indices = self.train_generator.class_indices
+        class_indices_path = self.config.root_dir / "class_indices.json"
+        save_json(path=class_indices_path, data=class_indices)
+        print(f"Class indices saved: {class_indices}")
+    
     
     def train(self):
         self.steps_per_epoch = self.train_generator.samples // self.train_generator.batch_size
@@ -82,3 +90,6 @@ class Training:
             path=self.config.trained_model_path,
             model=self.model
         )
+        
+        # Save class indices for prediction pipeline
+        self.save_class_indices()

@@ -1,0 +1,196 @@
+═══════════════════════════════════════════════════════════════════════════════
+                   CLASS MAPPING FLOW IN YOUR CNN PIPELINE
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           PHASE 1: TRAINING                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    📁 artifacts/data_ingestion/Banana/train/
+        ├── freshripe/      (20 images)
+        ├── freshunripe/    (20 images)
+        ├── overripe/       (20 images)
+        ├── ripe/           (20 images)
+        ├── rotten/         (20 images)
+        └── unripe/         (20 images)
+                   │
+                   │ flow_from_directory() scans folders
+                   ▼
+    🔤 Alphabetical sorting creates mapping:
+        ┌─────────────────────────────────────┐
+        │  freshripe    →  Index 0            │
+        │  freshunripe  →  Index 1            │
+        │  overripe     →  Index 2            │
+        │  ripe         →  Index 3            │
+        │  rotten       →  Index 4            │
+        │  unripe       →  Index 5            │
+        └─────────────────────────────────────┘
+                   │
+                   │ Model trains with these indices
+                   ▼
+    🧠 Neural Network Output Layer:
+        ┌─────────────────────────────────────┐
+        │  Output Neuron 0  →  freshripe      │
+        │  Output Neuron 1  →  freshunripe    │
+        │  Output Neuron 2  →  overripe       │
+        │  Output Neuron 3  →  ripe           │
+        │  Output Neuron 4  →  rotten         │
+        │  Output Neuron 5  →  unripe         │
+        └─────────────────────────────────────┘
+                   │
+                   │ Save mapping to file
+                   ▼
+    💾 artifacts/training/class_indices.json
+        {
+          "freshripe": 0,
+          "freshunripe": 1,
+          "overripe": 2,
+          "ripe": 3,
+          "rotten": 4,
+          "unripe": 5
+        }
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          PHASE 2: EVALUATION                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    📁 artifacts/data_ingestion/Banana/test/
+        ├── freshripe/      (10 images)
+        ├── freshunripe/    (10 images)
+        ├── overripe/       (10 images)
+        ├── ripe/           (10 images)
+        ├── rotten/         (10 images)
+        └── unripe/         (10 images)
+                   │
+                   │ flow_from_directory() scans folders
+                   ▼
+    🔤 Same alphabetical sorting = Same mapping!
+        ┌─────────────────────────────────────┐
+        │  freshripe    →  Index 0            │
+        │  freshunripe  →  Index 1            │
+        │  overripe     →  Index 2            │
+        │  ripe         →  Index 3            │
+        │  rotten       →  Index 4            │
+        │  unripe       →  Index 5            │
+        └─────────────────────────────────────┘
+                   │
+                   ▼
+    📊 Model evaluates correctly:
+        Ground Truth: ripe (index 3)  →  Prediction: [0.01, 0.02, 0.01, 0.94, 0.01, 0.01]
+        Predicted Index: 3 (argmax)   →  CORRECT! ✅
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          PHASE 3: PREDICTION                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    🖼️  New banana image uploaded
+                   │
+                   │ Preprocessing
+                   ▼
+    📐 Resize to 224×224, Rescale to [0,1]
+                   │
+                   ▼
+    🧠 Model predicts probabilities:
+        ┌─────────────────────────────────────┐
+        │  Index 0 (?)  →  0.02  (2%)         │
+        │  Index 1 (?)  →  0.01  (1%)         │
+        │  Index 2 (?)  →  0.03  (3%)         │
+        │  Index 3 (?)  →  0.87  (87%) ← MAX  │
+        │  Index 4 (?)  →  0.05  (5%)         │
+        │  Index 5 (?)  →  0.02  (2%)         │
+        └─────────────────────────────────────┘
+                   │
+                   │ argmax() = 3
+                   ▼
+    💾 Load class_indices.json
+        {
+          "freshripe": 0,
+          "freshunripe": 1,
+          "overripe": 2,
+          "ripe": 3,      ← Index 3 found!
+          "rotten": 4,
+          "unripe": 5
+        }
+                   │
+                   │ Reverse mapping: 3 → "ripe"
+                   ▼
+    ✅ Final Result:
+        ┌─────────────────────────────────────┐
+        │  Predicted Class: "ripe"            │
+        │  Confidence: 87%                    │
+        └─────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                             KEY INSIGHTS
+═══════════════════════════════════════════════════════════════════════════════
+
+🔑 WHY IT WORKS:
+
+1. DETERMINISTIC ORDERING
+   └─ Python's sorted() always produces same alphabetical order
+   └─ "freshripe" will ALWAYS be index 0 across all phases
+
+2. CONSISTENT PREPROCESSING
+   └─ All images rescaled by dividing by 255.0
+   └─ All images resized to 224×224
+
+3. SAVED MAPPING
+   └─ Training saves class_indices.json
+   └─ Prediction loads this file for accurate mapping
+
+4. MODEL OUTPUT STRUCTURE
+   └─ Model ALWAYS outputs 6 probabilities (one per class)
+   └─ Index position corresponds to class index
+
+
+⚠️  WHAT COULD BREAK IT:
+
+❌ Changing folder names after training
+   └─ "ripe" → "banana_ripe" changes alphabetical order!
+
+❌ Different preprocessing
+   └─ Training uses /255, prediction uses /1 → wrong results
+
+❌ Missing class_indices.json
+   └─ Falls back to hardcoded mapping (works but not ideal)
+
+❌ Different number of classes
+   └─ Model expects 6 outputs, not 5 or 7
+
+
+✅ BEST PRACTICES IMPLEMENTED:
+
+1. Save class indices during training
+2. Load class indices during prediction
+3. Print mappings for verification
+4. Consistent preprocessing everywhere
+5. Clear documentation and logging
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                           TESTING YOUR SETUP
+═══════════════════════════════════════════════════════════════════════════════
+
+After training, you should see:
+
+artifacts/training/
+├── model.h5                    ← Trained model
+└── class_indices.json          ← Class mapping (NEW!)
+
+Content of class_indices.json:
+{
+  "freshripe": 0,
+  "freshunripe": 1,
+  "overripe": 2,
+  "ripe": 3,
+  "rotten": 4,
+  "unripe": 5
+}
+
+This file ensures your predictions always use the correct class names! 🎯
+
+═══════════════════════════════════════════════════════════════════════════════
+
